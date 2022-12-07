@@ -3,51 +3,49 @@ import sys
 import random
 
 
-def create_pipe():
-    random_pipe_position = random.choice(pipe_height)
-    bottom_pipe = pipe_surface.get_rect(midtop=(700, random_pipe_position))
-    top_pipe = pipe_surface.\
-        get_rect(midbottom=(700, random_pipe_position - 300))
-    return bottom_pipe, top_pipe
+class pipe:
+    def create_pipe():
+        random_pipe_position = random.choice(pipe_height)
+        bottom_pipe = pipe_surface.get_rect(midtop=(700, random_pipe_position))
+        top_pipe = pipe_surface.\
+            get_rect(midbottom=(700, random_pipe_position - 300))
+        return bottom_pipe, top_pipe
 
+    def move_pipes(pipes):
+        for pipe in pipes:
+            pipe.centerx -= 5
+        return pipes
 
-def move_pipes(pipes):
-    for pipe in pipes:
-        pipe.centerx -= 5
-    return pipes
+    def draw_pipes(pipes):
+        for pipe in pipes:
+            if pipe.bottom >= 1024:
+                screen.blit(pipe_surface, pipe)
+            else:
+                flip_pipe = pygame.transform.flip(pipe_surface, False, True)
+                screen.blit(flip_pipe, pipe)
 
+    def check_collision(pipes):
+        for pipe in pipes:
+            if bird_rectangle.colliderect(pipe):
+                death_sound.play()
+                return False
 
-def draw_pipes(pipes):
-    for pipe in pipes:
-        if pipe.bottom >= 1024:
-            screen.blit(pipe_surface, pipe)
-        else:
-            flip_pipe = pygame.transform.flip(pipe_surface, False, True)
-            screen.blit(flip_pipe, pipe)
-
-
-def check_collision(pipes):
-    for pipe in pipes:
-        if bird_rectangle.colliderect(pipe):
-            death_sound.play()
+        if bird_rectangle.top <= 100 or bird_rectangle.bottom >= 900:
             return False
 
-    if bird_rectangle.top <= 100 or bird_rectangle.bottom >= 900:
-        return False
-
-    return True
+        return True
 
 
-def rotate_bird(bird):
-    new_bird = pygame.transform.rotozoom(bird, -bird_movement * 3, 1)
-    return new_bird
+class bird:
+    def rotate_bird(bird):
+        new_bird = pygame.transform.rotozoom(bird, -bird_movement * 3, 1)
+        return new_bird
 
-
-def bird_animation():
-    new_bird = bird_frames[bird_index]
-    new_bird_rectangle = \
-        new_bird.get_rect(center=(100, bird_rectangle.centery))
-    return new_bird, new_bird_rectangle
+    def bird_animation():
+        new_bird = bird_frames[bird_index]
+        new_bird_rectangle = \
+            new_bird.get_rect(center=(100, bird_rectangle.centery))
+        return new_bird, new_bird_rectangle
 
 
 def score_display(game_state):
@@ -76,22 +74,30 @@ def update_score(score, high_score):
     return high_score
 
 
-'''def background(score):
+def background(score):
     global changed
     global background_surface
-    if 2 <= score < 4 and changed != 2:
-        background_surface = pygame.image.load('assets/b2.png').convert()
+    if 5 <= score < 10 and changed != 2:
+        background_surface = pygame.image.load('assets/b4.png').convert()
         background_surface = pygame.transform.scale2x(background_surface)
         changed = 2
-    if score >= 4 and changed != 3:
+    if 15 > score >= 10 and changed != 3:
         background_surface = pygame.image.load('assets/b3.png').convert()
         background_surface = pygame.transform.scale2x(background_surface)
         changed = 3
-
-    elif score < 2 and changed != 1:
+    if 20 > score >= 15 and changed != 4:
+        background_surface = pygame.image.load('assets/b5.png').convert()
+        background_surface = pygame.transform.scale2x(background_surface)
+        changed = 4
+    if score >= 20 and changed != 5:
         background_surface = pygame.image.load('assets/b1.png').convert()
         background_surface = pygame.transform.scale2x(background_surface)
-        changed = 1'''
+        changed = 5
+
+    elif score < 5 and changed != 1:
+        background_surface = pygame.image.load('assets/b2.png').convert()
+        background_surface = pygame.transform.scale2x(background_surface)
+        changed = 1
 
 
 pygame.mixer.pre_init(frequency=44100, size=16, channels=10, buffer=512)
@@ -108,7 +114,7 @@ score = 0
 high_score = 0
 font_score = score
 
-background_surface = pygame.image.load('assets/background-night.png').convert()
+background_surface = pygame.image.load('assets/b2.png').convert()
 background_surface = pygame.transform.scale2x(background_surface)
 changed = 1
 
@@ -151,7 +157,9 @@ score_sound_countdown = 100
 
 while True:
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+        if event.type == pygame.QUIT or \
+                (event.type == pygame.KEYDOWN and
+                 event.key == pygame.K_ESCAPE):
             pygame.quit()
             sys.exit()
 
@@ -160,9 +168,6 @@ while True:
                 bird_movement = 0
                 bird_movement -= 8
                 flap_sound.play()
-            if event.key == pygame.K_ESCAPE:
-                game_over_surface = True
-                pygame.quit()
             if event.key == pygame.K_SPACE and game_active is False:
                 game_active = True
                 pipe_list.clear()
@@ -171,7 +176,7 @@ while True:
                 score = 0
 
         if event.type == SPAWNPIPE:
-            pipe_list.extend(create_pipe())
+            pipe_list.extend(pipe.create_pipe())
 
         if event.type == BIRDFLAP:
             if bird_index < 2:
@@ -179,24 +184,24 @@ while True:
             else:
                 bird_index = 0
 
-            bird_surface, bird_rectangle = bird_animation()
+            bird_surface, bird_rectangle = bird.bird_animation()
 
     screen.blit(background_surface, (0, 0))
 
     if game_active:
         bird_movement += gravity
-        rotated_bird = rotate_bird(bird_surface)
+        rotated_bird = bird.rotate_bird(bird_surface)
         bird_rectangle.centery += bird_movement
         screen.blit(rotated_bird, bird_rectangle)
-        game_active = check_collision(pipe_list)
+        game_active = pipe.check_collision(pipe_list)
 
-        pipe_list = move_pipes(pipe_list)
-        draw_pipes(pipe_list)
+        pipe_list = pipe.move_pipes(pipe_list)
+        pipe.draw_pipes(pipe_list)
 
         score += 0.007
         score_display('main_game')
         score_sound_countdown -= 1
-        #background(score)
+        background(score)
 
         if score_sound_countdown <= 0:
             score_sound.play()
@@ -209,3 +214,5 @@ while True:
 
     pygame.display.update()
     clock.tick(120)
+
+    
